@@ -4,6 +4,7 @@ import logging
 import math
 from functools import lru_cache
 from string import Template
+import json
 
 import dynamicprompts
 import gradio as gr
@@ -14,6 +15,7 @@ from dynamicprompts.parser.parse import ParserConfig
 from dynamicprompts.wildcards import WildcardManager
 from modules.processing import fix_seed
 from modules.shared import opts
+from modules import generation_parameters_copypaste
 
 from sd_dynamic_prompts import __version__, callbacks
 from sd_dynamic_prompts.element_ids import make_element_id
@@ -103,8 +105,8 @@ class Script(scripts.Script):
         if loaded_count % 2 == 0:
             return
 
-        callbacks.register_pnginfo_saver(self._pnginfo_saver)
-        callbacks.register_prompt_writer(self._prompt_writer)
+        # callbacks.register_pnginfo_saver(self._pnginfo_saver)
+        # callbacks.register_prompt_writer(self._prompt_writer)
         callbacks.register_on_infotext_pasted(self._pnginfo_saver)
         callbacks.register_settings()
         callbacks.register_wildcards_tab(self._wildcard_manager)
@@ -519,6 +521,20 @@ class Script(scripts.Script):
             positive_prompts=all_prompts,
             negative_prompts=all_negative_prompts,
         )
+
+        if opts.dp_write_raw_template:
+            # if original_prompt / original_negative_prompt will not be auto quoted by webui and will be effected by stripped, we need to quote it ourselves
+            if original_prompt and original_prompt != original_prompt.strip() and original_prompt == generation_parameters_copypaste.quote(original_prompt):
+                original_prompt = json.dumps(original_prompt, ensure_ascii=False)
+            if original_negative_prompt and original_negative_prompt != original_negative_prompt.strip() and original_negative_prompt == generation_parameters_copypaste.quote(original_negative_prompt):
+                original_negative_prompt = json.dumps(original_negative_prompt, ensure_ascii=False)
+
+            p.extra_generation_params.update(
+                {
+                    "Template": original_prompt if original_prompt else None,
+                    "Negative Template": original_negative_prompt if original_negative_prompt else None,
+                }
+            )
 
         p.all_prompts = all_prompts
         p.all_negative_prompts = all_negative_prompts
