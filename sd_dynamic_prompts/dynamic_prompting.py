@@ -86,6 +86,15 @@ def get_magic_prompt_device() -> torch.device:
     return device
 
 
+def requote_prompt(prompt: str) -> str | None:
+    # if prompt is empty, return None
+    # if prompt will not be auto quoted by webui and can effected by stripping, we need to quote it ourselves
+    if prompt:
+        if prompt != prompt.strip() and prompt == generation_parameters_copypaste.quote(prompt):
+            prompt = json.dumps(prompt, ensure_ascii=False)
+        return prompt
+
+
 class Script(scripts.Script):
     def __init__(self):
         global loaded_count
@@ -105,8 +114,7 @@ class Script(scripts.Script):
         if loaded_count % 2 == 0:
             return
 
-        # callbacks.register_pnginfo_saver(self._pnginfo_saver)
-        # callbacks.register_prompt_writer(self._prompt_writer)
+        callbacks.register_prompt_writer(self._prompt_writer)
         callbacks.register_on_infotext_pasted(self._pnginfo_saver)
         callbacks.register_settings()
         callbacks.register_wildcards_tab(self._wildcard_manager)
@@ -523,18 +531,8 @@ class Script(scripts.Script):
         )
 
         if opts.dp_write_raw_template:
-            # if original_prompt / original_negative_prompt will not be auto quoted by webui and will be effected by stripped, we need to quote it ourselves
-            if original_prompt and original_prompt != original_prompt.strip() and original_prompt == generation_parameters_copypaste.quote(original_prompt):
-                original_prompt = json.dumps(original_prompt, ensure_ascii=False)
-            if original_negative_prompt and original_negative_prompt != original_negative_prompt.strip() and original_negative_prompt == generation_parameters_copypaste.quote(original_negative_prompt):
-                original_negative_prompt = json.dumps(original_negative_prompt, ensure_ascii=False)
-
-            p.extra_generation_params.update(
-                {
-                    "Template": original_prompt if original_prompt else None,
-                    "Negative Template": original_negative_prompt if original_negative_prompt else None,
-                }
-            )
+            p.extra_generation_params['Template'] = requote_prompt(original_prompt)
+            p.extra_generation_params['Negative Template'] = requote_prompt(original_negative_prompt)
 
         p.all_prompts = all_prompts
         p.all_negative_prompts = all_negative_prompts
