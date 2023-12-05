@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import math
 from functools import lru_cache
 from string import Template
-import json
 
 import dynamicprompts
 import gradio as gr
@@ -13,9 +13,9 @@ import torch
 from dynamicprompts.generators.promptgenerator import GeneratorException
 from dynamicprompts.parser.parse import ParserConfig
 from dynamicprompts.wildcards import WildcardManager
+from modules import generation_parameters_copypaste
 from modules.processing import fix_seed
 from modules.shared import opts
-from modules import generation_parameters_copypaste
 
 from sd_dynamic_prompts import __version__, callbacks
 from sd_dynamic_prompts.element_ids import make_element_id
@@ -90,7 +90,9 @@ def requote_prompt(prompt: str) -> str | None:
     # if prompt is empty, return None
     # if prompt will not be auto quoted by webui and can effected by stripping, we need to quote it ourselves
     if prompt:
-        if prompt != prompt.strip() and prompt == generation_parameters_copypaste.quote(prompt):
+        if prompt != prompt.strip() and prompt == generation_parameters_copypaste.quote(
+                prompt
+        ):
             prompt = json.dumps(prompt, ensure_ascii=False)
         return prompt
 
@@ -530,8 +532,10 @@ class Script(scripts.Script):
         )
 
         if opts.dp_write_raw_template:
-            p.extra_generation_params['Template'] = requote_prompt(original_prompt)
-            p.extra_generation_params['Negative Template'] = requote_prompt(original_negative_prompt)
+            p.extra_generation_params["Template"] = requote_prompt(original_prompt)
+            p.extra_generation_params["Negative Template"] = requote_prompt(
+                original_negative_prompt
+            )
 
         p.all_prompts = all_prompts
         p.all_negative_prompts = all_negative_prompts
